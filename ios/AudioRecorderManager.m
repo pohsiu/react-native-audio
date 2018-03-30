@@ -12,6 +12,7 @@
 #import <React/RCTUtils.h>
 #import <React/RCTEventDispatcher.h>
 #import <AVFoundation/AVFoundation.h>
+#import <CoreAudio/CoreAudioTypes.h>
 
 NSString *const AudioRecorderEventProgress = @"recordingProgress";
 NSString *const AudioRecorderEventFinished = @"recordingFinished";
@@ -32,6 +33,8 @@ NSString *const AudioRecorderEventFinished = @"recordingFinished";
   AVAudioSession *_recordSession;
   BOOL _meteringEnabled;
   BOOL _measurementMode;
+  NSTimer *levelTimer;
+  double lowPassResults;
 }
 
 @synthesize bridge = _bridge;
@@ -190,6 +193,9 @@ RCT_EXPORT_METHOD(prepareRecordingAtPath:(NSString *)path sampleRate:(float)samp
       // TODO: dispatch error over the bridge
     } else {
       [_audioRecorder prepareToRecord];
+        //try sth here below
+        _audioRecorder.meteringEnabled = YES;
+        
   }
 }
 
@@ -198,6 +204,8 @@ RCT_EXPORT_METHOD(startRecording)
   [self startProgressTimer];
   [_recordSession setActive:YES error:nil];
   [_audioRecorder record];
+    //try sth below too,
+    levelTimer = [NSTimer scheduledTimerWithTimeInterval: 0.03 target: self selector: @selector(levelTimerCallback:) userInfo: nil repeats: YES];
 }
 
 RCT_EXPORT_METHOD(stopRecording)
@@ -250,6 +258,19 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
       resolve(@NO);
     }
   }];
+}
+- (void)levelTimerCallback:(NSTimer *)timer {
+    [_audioRecorder updateMeters];
+    
+    const double ALPHA = 0.05;
+    double peakPowerForChannel = pow(10, (0.05 * [_audioRecorder peakPowerForChannel:0]));
+    lowPassResults = ALPHA * peakPowerForChannel + (1.0 - ALPHA) * lowPassResults;
+    
+    if(lowPassResults>0.05){
+        NSLog(@"Mic blow detected %.2f",lowPassResults);
+        NSNumber *value = [NSNumber numberWithDouble:lowPassResults];
+        [self.bridge.eventDispatcher sendEventWithName:@"volumeChanged" body:@{@"volume": value}];
+    }
 }
 
 - (NSString *)getPathForDirectory:(int)directory

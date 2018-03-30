@@ -9,7 +9,7 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTLog.h>
 #import <AVFoundation/AVFoundation.h>
-
+#import <CoreAudio/CoreAudioTypes.h>
 @interface AudioRecorderManager : NSObject <RCTBridgeModule, AVAudioRecorderDelegate>
 
 @end

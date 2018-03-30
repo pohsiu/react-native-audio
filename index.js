@@ -30,7 +30,14 @@ var AudioRecorder = {
         }
       }
     );
-
+    if (this.volumeSubscription) this.volumeSubscription.remove();
+    this.volumeSubscription = NativeAppEventEmitter.addListener('volumeChanged',
+      (data) => {
+        if (this.onVolume) {
+          this.onVolume(data);
+        }
+      }
+    )
     var defaultOptions = {
       SampleRate: 44100.0,
       Channels: 2,
